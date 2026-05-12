@@ -196,7 +196,7 @@
           </p>
 
           <div class="contact-buttons" role="list" aria-label="Canales de contacto">
-            <a href="mailto:m.garcuder@gmail.com" class="button icon solid fa-envelope" role="listitem">
+            <a href="#email-modal" class="button icon solid fa-envelope email-trigger" role="listitem" aria-haspopup="dialog" aria-controls="email-modal">
               Email
             </a>
             <a
@@ -228,6 +228,25 @@
           </div>
         </div>
       </section>
+    </div>
+
+    <!-- Email Modal -->
+    <div id="email-modal" class="email-modal" aria-hidden="true">
+      <div class="email-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="email-modal-title">
+        <a href="#contact" class="email-modal__close" aria-label="Cerrar ventana">&times;</a>
+        <h3 id="email-modal-title">Mi correo</h3>
+        <div class="email-modal__field">
+          <div id="email-modal-input" class="email-modal__value">m.garcuder@gmail.com</div>
+          <button
+            type="button"
+            class="button email-modal__copy"
+            id="email-modal-copy"
+            onclick="navigator.clipboard.writeText('m.garcuder@gmail.com').then(() => { this.textContent = 'Copiado'; setTimeout(() => { this.textContent = 'Copiar'; }, 1400); }); return false;"
+          >
+            Copiar
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Project Modal -->

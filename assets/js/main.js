@@ -10,129 +10,143 @@
 		$body = $('body'),
 		$nav = $('#nav');
 
-	// Breakpoints.
-		breakpoints({
-			wide:      [ '961px',  '1880px' ],
-			normal:    [ '961px',  '1620px' ],
-			narrow:    [ '961px',  '1320px' ],
-			narrower:  [ '737px',  '960px'  ],
-			mobile:    [ null,     '736px'  ]
-		});
+						build: 'Arquitectura y Stack:\n\nAPI REST (Node.js/Express): Endpoints CRUD para carga de Excel, procesamiento de datos y envío masivo. Autenticación SMTP con Gmail/Google Workspace, manejo de errores con retry automático, rate limiting concurrente (configurable) y logging estructurado para auditoría de operaciones.\nValidación y Procesamiento de Datos: Normalización automática de cabeceras Excel (espacios, mayúsculas, tildes). Validación granular por fila: campos obligatorios (Cliente, Email_Cliente, CUPS, Compañía, Agente), formato de email (regex robusto), estado visual inmediato (rojo/amarillo/verde). Consolidación de datos con fallback automático de Email_Agente desde configuración externa.\nGeneración de Plantillas HTML: Generador dinámico de email HTML responsive (600px) con variables personalizables del Excel: Cliente, Email, CUPS, Tipo, Compañía, Agente. Imágenes embebidas por CID en Nodemailer para funcionamiento offline. Botones CTA (WhatsApp, Reseña Google) configurables. Footer con enlaces legales y copyright editables.\nFrontend Interactivo: Interfaz web responsive (HTML5 + CSS3 + Vanilla JavaScript) con carga de archivos Excel, visualización de tabla con validaciones en tiempo real, campos editables, modo simulación para testeos sin envío real, descarga de reportes en Excel.\nReportes y Auditoría: Generación de Excel descargable con resultados individuales por email: estado de envío, detalle de error (si aplica), remitente utilizado, timestamp. Modo simulación para validar flujo completo sin enviar correos reales. Resumen estadístico: total procesados, exitosos, errores.',
+						technologies: ['Node.js', 'Express', 'JavaScript', 'HTML5', 'CSS3', 'XLSX', 'Nodemailer', 'Multer', 'Gmail SMTP'],
+						media: [
+							{ type: 'video', src: 'videos/mailbot-demo.mp4', alt: 'Demo en video de Mailbot', poster: 'images/mailbot-1.png' },
+							{ type: 'image', src: 'images/mailbot-1.png', alt: 'Pantalla principal de Mailbot' },
+							{ type: 'image', src: 'images/mailbot-2.png', alt: 'Vista de gestion de notificaciones de Mailbot' }
+						]
+					}
+				};
 
-	// Play initial animations on page load.
-		$window.on('load', function() {
-			window.setTimeout(function() {
-				$body.removeClass('is-preload');
-			}, 100);
-		});
+				// Email popover.
+					var $emailPopover = $('#email-modal');
 
-	// Nav.
-		var $nav_a = $nav.find('a');
+					if ($emailPopover.length) {
+						var $emailTrigger = $('.email-trigger');
+						var $emailInput = $('#email-modal-input');
+						var $emailCopy = $('#email-modal-copy');
+						var $emailFeedback = $('#email-modal-feedback');
+						var emailValue = $emailInput.val();
+						var feedbackTimer = null;
 
-		$nav_a
-			.addClass('scrolly')
-			.on('click', function(e) {
+						var setEmailFeedback = function(message, isError) {
+							window.clearTimeout(feedbackTimer);
+							$emailFeedback.text(message || '').css('color', isError ? '#b33c3c' : '#2d7a46');
 
-				var $this = $(this);
+							if (message) {
+								feedbackTimer = window.setTimeout(function() {
+									$emailFeedback.text('');
+								}, 1600);
+							}
+						};
 
-				// External link? Bail.
-					if ($this.attr('href').charAt(0) != '#')
-						return;
+						var placeEmailPopover = function(triggerEl) {
+							var triggerRect = triggerEl.getBoundingClientRect();
+							var popoverEl = $emailPopover[0];
+							var popoverWidth = Math.min(popoverEl.offsetWidth || 360, window.innerWidth - 18);
+							var popoverHeight = popoverEl.offsetHeight || 220;
+							var gap = 12;
+							var left = triggerRect.right + gap;
+							var top = triggerRect.top + (triggerRect.height / 2) - (popoverHeight / 2);
 
-				// Prevent default.
-					e.preventDefault();
+							if (left + popoverWidth > window.innerWidth - 12)
+								left = triggerRect.left - popoverWidth - gap;
 
-				// Deactivate all links.
-					$nav_a.removeClass('active');
+							if (left < 12)
+								left = 12;
 
-				// Activate link *and* lock it (so Scrollex doesn't try to activate other links as we're scrolling to this one's section).
-					$this
-						.addClass('active')
-						.addClass('active-locked');
+							if (top < 12)
+								top = 12;
 
-			})
-			.each(function() {
+							if (top + popoverHeight > window.innerHeight - 12)
+								top = Math.max(12, window.innerHeight - popoverHeight - 12);
 
-				var	$this = $(this),
-					id = $this.attr('href'),
-					$section = $(id);
+							$emailPopover.css({
+								top: top + 'px',
+								left: left + 'px'
+							});
+						};
 
-				// No section for this link? Bail.
-					if ($section.length < 1)
-						return;
+						var openEmailPopover = function(triggerEl) {
+							$emailPopover.addClass('is-visible').attr('aria-hidden', 'false');
+							$body.addClass('email-modal-open');
+							setEmailFeedback('');
+							placeEmailPopover(triggerEl);
 
-				// Scrollex.
-					$section.scrollex({
-						mode: 'middle',
-						top: '-10vh',
-						bottom: '-10vh',
-						initialize: function() {
+							window.requestAnimationFrame(function() {
+								$emailInput.trigger('focus').trigger('select');
+							});
+						};
 
-							// Deactivate section.
-								$section.addClass('inactive');
+						var closeEmailPopover = function() {
+							window.clearTimeout(feedbackTimer);
+							$emailPopover.removeClass('is-visible').attr('aria-hidden', 'true');
+							$body.removeClass('email-modal-open');
+							setEmailFeedback('');
+						};
 
-						},
-						enter: function() {
+						var copyEmailToClipboard = function() {
+							var copyPromise = null;
 
-							// Activate section.
-								$section.removeClass('inactive');
-
-							// No locked links? Deactivate all links and activate this section's one.
-								if ($nav_a.filter('.active-locked').length == 0) {
-
-									$nav_a.removeClass('active');
-									$this.addClass('active');
-
+							if (navigator.clipboard && navigator.clipboard.writeText) {
+								copyPromise = navigator.clipboard.writeText(emailValue);
+							}
+							else {
+								$emailInput.trigger('focus').trigger('select');
+								try {
+									var copied = document.execCommand('copy');
+									copyPromise = copied ? $.Deferred().resolve().promise() : $.Deferred().reject().promise();
 								}
+								catch (error) {
+									copyPromise = $.Deferred().reject(error).promise();
+								}
+							}
 
-							// Otherwise, if this section's link is the one that's locked, unlock it.
-								else if ($this.hasClass('active-locked'))
-									$this.removeClass('active-locked');
+							$.when(copyPromise)
+								.done(function() {
+									setEmailFeedback('Correo copiado al portapapeles.');
+								})
+								.fail(function() {
+									setEmailFeedback('No se pudo copiar automáticamente. Selecciónalo manualmente.', true);
+								});
+						};
 
-						}
-					});
+						$emailTrigger.on('click', function(e) {
+							e.preventDefault();
+							openEmailPopover(this);
+						});
 
-			});
+						$emailPopover.on('click', '[data-email-modal-close]', function() {
+							closeEmailPopover();
+						});
 
-	// Scrolly.
-		$('.scrolly').scrolly();
+						$emailCopy.on('click', function() {
+							copyEmailToClipboard();
+						});
 
-	// Header (narrower + mobile).
+						$(document).on('click', function(e) {
+							if (!$emailPopover.hasClass('is-visible'))
+								return;
 
-		// Toggle.
-			$(
-				'<div id="headerToggle">' +
-					'<a href="#header" class="toggle"></a>' +
-				'</div>'
-			)
-				.appendTo($body);
+							if ($(e.target).closest('#email-modal, .email-trigger').length)
+								return;
 
-		// Header.
-			$('#header')
-				.panel({
-					delay: 500,
-					hideOnClick: true,
-					hideOnSwipe: true,
-					resetScroll: true,
-					resetForms: true,
-					side: 'left',
-					target: $body,
-					visibleClass: 'header-visible'
-				});
+							closeEmailPopover();
+						});
 
-		// Project modal.
-			var projectCatalog = {
-				horarios: {
-					title: 'Generador de Horarios - Centros Educativos',
-					summary: 'Sistema modular de generación automática de horarios que implementa un motor de restricciones basado en reglas académicas. La solución combina un backend REST en PHP con un scheduler en Python/PHP que aplica algoritmos de optimización sujetos a restricciones de disponibilidad docente, capacidad de aulas y prioridades curriculares. Frontend reactivo (React + Vite) consume la API para visualizar, validar y ajustar manualmente los horarios generados.',
-					build: 'Arquitectura y Stack:\n\nAPI REST (PHP): Endpoints CRUD para centros, ciclos, profesores, asignaturas y horarios. Autenticación vía JWT, middleware de CORS y control de acceso por rol.\nLógica de generación: Motor de reglas en PHP + scheduler Python (OR-Tools/CP-SAT) para resolver el problema de asignación con restricciones.\nBase de datos: MySQL con esquema normalizado para persistencia de configuración y resultados.\nFrontend: React con componentes funcionales, Context API para estado global, Vite para bundling optimizado.\nDiagnóstico: módulos de validación que detectan conflictos, solapamientos y cargas docentes anómalas.',
-					technologies: ['JavaScript', 'React', 'Vite', 'Node.js', 'dockview', 'jspdf', 'HTML', 'CSS', 'PHP', 'PDO', 'JWT', 'REST API', 'MySQL', 'Python', 'OR-Tools', 'ESLint'],
-					media: [
-						{ type: 'video', src: 'videos/horarios-demo.mp4', alt: 'Demo en video del generador de horarios', poster: 'images/horarios-thumb.jpg' },
-						{ type: 'image', src: 'images/CapturaHorario_1.png', alt: 'Captura del horario 1' },
-						{ type: 'image', src: 'images/CapturaHorario_2.png', alt: 'Captura del horario 2' },
-						{ type: 'image', src: 'images/CapturaHorario_3.png', alt: 'Captura del horario 3' }
-					]
+						$(document).on('keydown', function(e) {
+							if (e.key === 'Escape' && $emailPopover.hasClass('is-visible')) {
+								closeEmailPopover();
+							}
+						});
+
+						$(window).on('resize scroll', function() {
+							if ($emailPopover.hasClass('is-visible'))
+								placeEmailPopover($emailTrigger.get(0));
+						});
+					}
 				},
 				mailbot: {
 					title: 'Mailbot - Sistema de Envío Masivo de Emails Personalizados',
