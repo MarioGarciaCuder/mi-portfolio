@@ -10,6 +10,27 @@
 		$body = $('body'),
 		$nav = $('#nav');
 
+	// Responsive viewport detection - Add classes to body based on window size
+	function updateViewportClass() {
+		var mobileQuery = window.matchMedia('(max-width: 736px)');
+		var tabletQuery = window.matchMedia('(min-width: 737px) and (max-width: 960px)');
+		
+		$body.removeClass('mobile tablet desktop');
+		
+		// Use media queries first, then fall back to jQuery.width()
+		if (mobileQuery.matches) {
+			$body.addClass('mobile');
+		} else if (tabletQuery.matches) {
+			$body.addClass('tablet');
+		} else {
+			$body.addClass('desktop');
+		}
+	}
+	
+	// Update on load and resize
+	updateViewportClass();
+	$window.on('resize', updateViewportClass);
+
 	// Project Catalog - Define all projects here
 	var projectCatalog = {
 		mailbot: {
@@ -370,5 +391,37 @@
 			}
 		});
 	}
+
+	// Header Toggle for Mobile
+	var $headerToggle = $('#headerToggle');
+	var $header = $('#header');
+	var headerVisible = false;
+
+	if ($headerToggle.length) {
+		$headerToggle.find('.toggle').on('click', function(e) {
+			e.preventDefault();
+			headerVisible = !headerVisible;
+			if (headerVisible) {
+				$body.addClass('header-visible');
+			} else {
+				$body.removeClass('header-visible');
+			}
+		});
+
+		// Close header when clicking on a nav link
+		$nav.find('a').on('click', function() {
+			headerVisible = false;
+			$body.removeClass('header-visible');
+		});
+
+		// Close header when clicking on main content
+		$('#main').on('click', function(e) {
+			if (headerVisible && !$(e.target).closest('#header, #headerToggle').length) {
+				headerVisible = false;
+				$body.removeClass('header-visible');
+			}
+		});
+	}
+
 
 })(jQuery);
